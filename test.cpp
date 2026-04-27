@@ -11,25 +11,40 @@
 int main() {
   moving_image im;
 
-  im.draw("imagen.png");
+  im.draw("1_imagen.png");
+  im.move_left(300);
+  sleep(1);
+  im.draw("2_imagen_desplazada_300left.png");
+  im.move_right(300);
+  sleep(1);
+  im.draw("3_imagen_desplazada_300right.png");
+  im.move_up(300);
+  sleep(1);
+  im.draw("4_imagen_desplazada_300up.png");
+  im.move_down(300);
+  sleep(1);
+  im.draw("5_imagen_desplazada_300down.png");
   im.rotate();
-  sleep(2);
-  im.draw("rotada.png");
-  im.move_left(500);
-  sleep(2);
-  im.draw("imagen_desplazada_500.png");
-  im.move_left(100);
-  sleep(2);
-  im.draw("imagen_desplazada_600.png");
-  im.move_right(200);
-  sleep(2);
-  im.draw("imagen_desplazada.png");
-  im.move_up(200);
-  sleep(2);
-  im.draw("imagen_desplazada_arriba.png");
-  im.move_down(500);
-  sleep(2);
-  im.draw("imagen_desplazada_abajo.png");
+  sleep(1);
+  im.draw("6_imagen_rotada.png");
+  
+  // Test undo
+  im.undo();
+  sleep(1);
+  im.draw("7_imagen_undo.png");
+
+  // Test redo
+  im.redo();
+  sleep(1);
+  im.draw("8_imagen_redo.png");
+
+  // Test repeat
+  im.repeat();
+  sleep(1);
+  im.draw("9_imagen_repeat.png");
+
+  // Test repeat_all
+  im.repeat_all();
 
   /* NOTA 1: Si usan el mismo nombre para las imágenes, entonces cada llamada al
   método draw() sobreescribirá a la imagen */

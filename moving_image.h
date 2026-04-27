@@ -2,12 +2,36 @@
 #define MOVING_IMG_H
 
 #include "basics.h"
+#include <stack>
+#include <queue>
+#include <string>
+#include <cstdio>
 
 // Clase que representa una imagen como una colección de 3 matrices siguiendo el
 // esquema de colores RGB
 
 class moving_image {
 private:
+  enum ActionType {
+    MOVE_LEFT,
+    MOVE_RIGHT,
+    MOVE_UP,
+    MOVE_DOWN,
+    ROTATE,
+    UNDO_ACT,
+    REDO_ACT,
+    REPEAT_ACT
+  };
+
+  struct Action {
+    ActionType type;
+    int d;
+  };
+
+  std::stack<Action> undo_stack;
+  std::stack<Action> redo_stack;
+  std::queue<Action> history_queue;
+
   unsigned char **red_layer; // Capa de tonalidades rojas
   unsigned char **green_layer; // Capa de tonalidades verdes
   unsigned char **blue_layer; // Capa de tonalidades azules
@@ -68,7 +92,12 @@ public:
   }
 
   // Función que similar desplazar la imagen, de manera circular, d pixeles a la izquierda
-  void move_left(int d) {
+  void move_left(int d, bool track = true) {
+    if (track) {
+      undo_stack.push({MOVE_LEFT, d});
+      while (!redo_stack.empty()) redo_stack.pop();
+      history_queue.push({MOVE_LEFT, d});
+    }
     unsigned char **tmp_layer = new unsigned char*[H_IMG];
     for(int i=0; i < H_IMG; i++) 
       tmp_layer[i] = new unsigned char[W_IMG];
@@ -113,7 +142,12 @@ public:
     	blue_layer[i][j] = tmp_layer[i][j];
   }
   //funcion para desplazar a la derecha
-  void move_right(int d) {
+  void move_right(int d, bool track = true) {
+    if (track) {
+      undo_stack.push({MOVE_RIGHT, d});
+      while (!redo_stack.empty()) redo_stack.pop();
+      history_queue.push({MOVE_RIGHT, d});
+    }
     unsigned char **tmp_layer = new unsigned char*[H_IMG];
     for(int i=0; i < H_IMG; i++) 
         tmp_layer[i] = new unsigned char[W_IMG];
@@ -159,7 +193,12 @@ public:
 }
 
   //mover hacia arriba
-  void move_up(int d) {
+  void move_up(int d, bool track = true) {
+    if (track) {
+      undo_stack.push({MOVE_UP, d});
+      while (!redo_stack.empty()) redo_stack.pop();
+      history_queue.push({MOVE_UP, d});
+    }
     unsigned char **tmp_layer = new unsigned char*[H_IMG];
     for(int i=0; i < H_IMG; i++) 
       tmp_layer[i] = new unsigned char[W_IMG];
@@ -205,7 +244,12 @@ public:
 
   }
 
-  void move_down(int d) {
+  void move_down(int d, bool track = true) {
+    if (track) {
+      undo_stack.push({MOVE_DOWN, d});
+      while (!redo_stack.empty()) redo_stack.pop();
+      history_queue.push({MOVE_DOWN, d});
+    }
     unsigned char **tmp_layer = new unsigned char*[H_IMG];
     for(int i=0; i < H_IMG; i++) 
       tmp_layer[i] = new unsigned char[W_IMG];
@@ -252,7 +296,12 @@ public:
   }
 
   //rota en 90 grados la imagen en sentido horario
-  void rotate() {
+  void rotate(bool track = true) {
+    if (track) {
+      undo_stack.push({ROTATE, 0});
+      while (!redo_stack.empty()) redo_stack.pop();
+      history_queue.push({ROTATE, 0});
+    }
     unsigned char **tmp_layer = new unsigned char*[H_IMG];
     for(int i=0; i < H_IMG; i++) 
         tmp_layer[i] = new unsigned char[W_IMG];
@@ -283,8 +332,85 @@ public:
     for(int i=0; i < H_IMG; i++)
         for(int j=0; j < W_IMG; j++)
             blue_layer[i][j] = tmp_layer[i][j];
-}
+  }
 
+  void undo(bool track = true) {
+    if (undo_stack.empty()) return;
+    if (track) history_queue.push({UNDO_ACT, 0});
+    Action act = undo_stack.top();
+    undo_stack.pop();
+    redo_stack.push(act);
+
+    switch (act.type) {
+      case MOVE_LEFT: move_right(act.d, false); break;
+      case MOVE_RIGHT: move_left(act.d, false); break;
+      case MOVE_UP: move_down(act.d, false); break;
+      case MOVE_DOWN: move_up(act.d, false); break;
+      case ROTATE: 
+        rotate(false);
+        rotate(false);
+        rotate(false);
+        break;
+    }
+  }
+
+  void redo(bool track = true) {
+    if (redo_stack.empty()) return;
+    if (track) history_queue.push({REDO_ACT, 0});
+    Action act = redo_stack.top();
+    redo_stack.pop();
+    undo_stack.push(act);
+
+    switch (act.type) {
+      case MOVE_LEFT: move_left(act.d, false); break;
+      case MOVE_RIGHT: move_right(act.d, false); break;
+      case MOVE_UP: move_up(act.d, false); break;
+      case MOVE_DOWN: move_down(act.d, false); break;
+      case ROTATE: rotate(false); break;
+    }
+  }
+
+  void repeat(bool track = true) {
+    if (undo_stack.empty()) return;
+    if (track) history_queue.push({REPEAT_ACT, 0});
+    Action act = undo_stack.top();
+
+    undo_stack.push(act);
+    while (!redo_stack.empty()) redo_stack.pop();
+
+    switch (act.type) {
+      case MOVE_LEFT: move_left(act.d, false); break;
+      case MOVE_RIGHT: move_right(act.d, false); break;
+      case MOVE_UP: move_up(act.d, false); break;
+      case MOVE_DOWN: move_down(act.d, false); break;
+      case ROTATE: rotate(false); break;
+    }
+  }
+
+  void repeat_all() {
+    moving_image temp_img;
+    std::queue<Action> temp_queue = history_queue;
+    int count = 1;
+    while (!temp_queue.empty()) {
+      Action act = temp_queue.front();
+      temp_queue.pop();
+
+      switch (act.type) {
+        case MOVE_LEFT: temp_img.move_left(act.d, true); break;
+        case MOVE_RIGHT: temp_img.move_right(act.d, true); break;
+        case MOVE_UP: temp_img.move_up(act.d, true); break;
+        case MOVE_DOWN: temp_img.move_down(act.d, true); break;
+        case ROTATE: temp_img.rotate(true); break;
+        case UNDO_ACT: temp_img.undo(false); break;
+        case REDO_ACT: temp_img.redo(false); break;
+        case REPEAT_ACT: temp_img.repeat(false); break;
+      }
+
+      char filename[50];
+      sprintf(filename, "movie_%d.png", count++);
+      temp_img.draw(filename);
+    }
+  }
 
 private:
   // Función privada que guarda la imagen en formato .png
