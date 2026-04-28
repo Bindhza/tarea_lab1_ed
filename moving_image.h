@@ -7,6 +7,14 @@
 #include <string>
 #include <cstdio>
 
+
+// --------------------
+// Integrantes:
+// Benjamin Poblete
+// Khristian Villalobos
+// --------------------
+
+
 // Clase que representa una imagen como una colección de 3 matrices siguiendo el
 // esquema de colores RGB
 

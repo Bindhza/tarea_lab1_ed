@@ -8,6 +8,14 @@
 #include "moving_image.h"
 #include<unistd.h> // para sleep (linux). Usar  #include<windows.h> para Windows
 
+
+// --------------------
+// Integrantes:
+// Benjamin Poblete
+// Khristian Villalobos
+// --------------------
+
+
 int main() {
   moving_image im;
 
